@@ -2,211 +2,238 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Product Price & MOQ Finder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KiranaCompare – lowest grocery prices</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background: #f4f6f9; color: #222; }
-  .container { max-width: 1000px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
-  h1 { font-size: 1.5rem; margin-top: 0; }
-  h2 { font-size: 1.1rem; margin: 24px 0 6px; }
-  label { font-weight: 600; }
-  input, textarea { width: 100%; padding: 10px; margin: 6px 0 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
-  textarea { height: 120px; font-family: monospace; }
-  button { padding: 10px 16px; border: none; border-radius: 6px; background: #2563eb; color: #fff; cursor: pointer; font-size: .95rem; margin: 0 6px 6px 0; }
-  button.danger { background: #dc2626; }
-  button.small { padding: 4px 8px; font-size: .8rem; }
-  .links a { display: inline-block; margin: 4px 8px 4px 0; padding: 6px 10px; background: #e0e7ff; border-radius: 5px; text-decoration: none; color: #1e3a8a; font-size: .9rem; }
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: .95rem; }
-  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
-  th { background: #f1f5f9; }
-  tr.best td { background: #ecfdf5; }
-  .hint { font-size: .85rem; color: #666; margin: 0; }
-  .matchnote { font-size: .85rem; color: #1e3a8a; margin: 4px 0; }
-  @media (max-width: 600px) { table { font-size: .8rem; } }
+  :root{
+    --bg:#f7f3e8; --ink:#1f2a1c; --muted:#68705f; --card:#fffdf7;
+    --line:#ddd6bf; --green:#1f6b3a; --best:#e8f3df; --chili:#c8321e; --turmeric:#f2b705; --onGreen:#fff;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#161a13;--ink:#f1eedf;--muted:#a3ab98;--card:#1f241b;--line:#343b2d;--green:#7fd196;--best:#22331f;--chili:#ff7a63;--onGreen:#10200f}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif}
+  main{max-width:720px;margin:0 auto;padding:48px 20px 64px}
+  h1{font:800 clamp(2.2rem,7vw,3.6rem)/1 "Bricolage Grotesque",sans-serif;margin:0 0 10px;letter-spacing:-.02em}
+  h1 span{background:var(--turmeric);color:#1f2a1c;padding:0 .15em;border-radius:6px}
+  .sub{color:var(--muted);margin:0 0 28px;max-width:50ch}
+  .search{display:flex;gap:8px}
+  input{flex:1;min-width:0;padding:15px 16px;font:inherit;font-size:1.05rem;border:2px solid var(--ink);border-radius:10px;background:var(--card);color:var(--ink)}
+  .go{padding:0 22px;font:600 1rem Inter,sans-serif;background:var(--green);color:var(--onGreen);border:0;border-radius:10px;cursor:pointer}
+  .go:focus-visible,input:focus-visible,a:focus-visible,.chip:focus-visible{outline:3px solid var(--turmeric);outline-offset:2px}
+  .chips{margin:14px 0 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .chip{padding:6px 12px;font:500 .9rem Inter,sans-serif;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:99px;cursor:pointer}
+  .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .lbl{font-size:.88rem;color:var(--muted)}
+  #guess{margin:22px 0 0;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px}
+  #guess[hidden]{display:none}
+  #status{margin:22px 0 12px;color:var(--muted);font-size:.95rem}
+  ol{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  li a{display:grid;grid-template-columns:1fr auto;gap:2px 16px;align-items:center;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:12px;color:inherit;text-decoration:none}
+  li a:hover{border-color:var(--ink)}
+  li.best a{background:var(--best);border:2px solid var(--green)}
+  .store{font:700 1.1rem "Bricolage Grotesque",sans-serif}
+  .item{color:var(--muted);font-size:.9rem}
+  .price{font:800 1.6rem "Bricolage Grotesque",sans-serif;grid-row:1/3;grid-column:2;text-align:right}
+  li.best .price{color:var(--green)}
+  .tag{display:inline-block;margin-left:8px;font:600 .75rem Inter;background:var(--green);color:var(--onGreen);padding:2px 8px;border-radius:99px;vertical-align:middle}
+  .save{grid-column:1/3;color:var(--chili);font-size:.85rem;font-weight:500}
+  .note{margin-top:24px;padding:12px 14px;border-left:4px solid var(--turmeric);background:var(--card);font-size:.88rem;color:var(--muted)}
+  .note[hidden]{display:none}
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>🔎 Product Price & MOQ Finder</h1>
+<main>
+  <h1>Kirana<span>Compare</span></h1>
+  <p class="sub">Type any grocery item, even with spelling mistakes. We work out what you meant and list the five cheapest places to buy it.</p>
 
-  <label for="product">Product name (spelling mistakes are OK)</label>
-  <input id="product" placeholder="e.g. wodden study tabel" oninput="onProductInput()">
-  <p class="hint" id="spellNote"></p>
-  <div class="links" id="links"></div>
+  <form class="search" id="form">
+    <input id="q" type="search" placeholder="e.g. ashirwad aata 5 kg, tur dhal, maggie" aria-label="Product name" autocomplete="off" required>
+    <button class="go" type="submit">Compare</button>
+  </form>
+  <div class="chips" id="samples"></div>
 
-  <h2>Paste results</h2>
-  <p class="hint">One product per line. Format: Product | Platform | Price (₹) | MOQ | Link</p>
-  <textarea id="input" placeholder="Wooden Study Table | Amazon | 2499 | 1 | https://www.amazon.in/..."></textarea>
-  <button onclick="addFromText()">Add to table</button>
-
-  <h2>Results (lowest price first)</h2>
-  <p class="matchnote" id="matchNote"></p>
-  <table>
-    <thead>
-      <tr><th>Sl No</th><th>Product Name</th><th>Platform</th><th>Price (₹)</th><th>MOQ</th><th>Link</th><th></th></tr>
-    </thead>
-    <tbody id="rows"></tbody>
-  </table>
-
-  <p style="margin-top:16px">
-    <button onclick="exportCSV()">Download CSV</button>
-    <button class="danger" onclick="clearAll()">Clear all</button>
-  </p>
-</div>
+  <div id="guess" hidden></div>
+  <div id="status" aria-live="polite"></div>
+  <ol id="results"></ol>
+  <div class="note" id="note" hidden></div>
+</main>
 
 <script>
-  const platforms = [
-    { name: "Amazon.in",       url: q => `https://www.amazon.in/s?k=${q}` },
-    { name: "Flipkart",        url: q => `https://www.flipkart.com/search?q=${q}` },
-    { name: "IndiaMART",       url: q => `https://dir.indiamart.com/search.mp?ss=${q}` },
-    { name: "Meesho",          url: q => `https://www.meesho.com/search?q=${q}` },
-    { name: "Alibaba",         url: q => `https://www.alibaba.com/trade/search?SearchText=${q}` },
-    { name: "Google Shopping", url: q => `https://www.google.com/search?tbm=shop&q=${q}` }
-  ];
+/* ================= CONFIG =================
+   1) PRICES (optional): a browser cannot read other shops' prices directly.
+      Point PRICE_API to your own backend. It receives  PRICE_API + encodeURIComponent(product)
+      and returns: [{ "store":"BigBasket", "title":"...", "price":245, "url":"https://..." }]
+      Empty = DEMO mode (estimated prices, real store search links).
 
-  let rows = [];
-  let nextId = 1;
+   2) AI SPELLING GUESS (optional): AI_API points to YOUR server that calls Claude.
+      (Never put an API key in this file.) Page sends  POST { "query": "ashirwad aata" }
+      and expects  { "guesses": ["Aashirvaad atta 5kg", "Aashirvaad whole wheat atta"] }
+      Empty or failing = built-in offline fuzzy matcher is used instead. */
+const PRICE_API = "";
+const AI_API    = "";
+const MAX_GUESSES = 3;
 
-  function escapeHTML(s) {
-    return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const STORES = [
+  {name:"BigBasket",        url:q=>`https://www.bigbasket.com/ps/?q=${q}`},
+  {name:"Blinkit",          url:q=>`https://blinkit.com/s/?q=${q}`},
+  {name:"Zepto",            url:q=>`https://www.zeptonow.com/search?query=${q}`},
+  {name:"Swiggy Instamart", url:q=>`https://www.swiggy.com/instamart/search?query=${q}`},
+  {name:"JioMart",          url:q=>`https://www.jiomart.com/search/${q}`},
+  {name:"Amazon.in",        url:q=>`https://www.amazon.in/s?k=${q}`},
+  {name:"Flipkart",         url:q=>`https://www.flipkart.com/search?q=${q}`},
+  {name:"DMart Ready",      url:q=>`https://www.dmart.in/search?searchTerm=${q}`}
+];
+
+/* Built-in product vocabulary for offline spelling correction. Add more freely. */
+const CATALOG = `aashirvaad atta|pillsbury atta|fortune chakki atta|wheat flour|maida|besan|suji rava|rice flour|ragi flour|poha|basmati rice|india gate basmati rice|daawat basmati rice|sona masoori rice|brown rice|toor dal|moong dal|masoor dal|chana dal|urad dal|rajma|kabuli chana|green moong|moong whole|black chana|soya chunks|sugar|jaggery|tata salt|rock salt|fortune sunflower oil|saffola gold oil|fortune soyabean oil|mustard oil|kachi ghani mustard oil|groundnut oil|coconut oil|parachute coconut oil|olive oil|refined oil|amul ghee|patanjali ghee|amul butter|amul cheese slices|amul paneer|amul milk|amul gold milk|mother dairy milk|curd|dahi|greek yogurt|cream|condensed milk|eggs|brown bread|white bread|britannia bread|pav|maggi noodles|yippee noodles|top ramen|pasta|macaroni|vermicelli|oats|quaker oats|kellogg corn flakes|muesli|chocos|parle g biscuits|britannia good day|oreo biscuits|hide and seek|marie gold|dark fantasy|digestive biscuits|lays chips|kurkure|bingo|haldiram bhujia|haldiram namkeen|popcorn|peanuts|almonds|cashews|raisins|walnuts|dates|pistachios|dry fruits|tata tea gold|red label tea|taj mahal tea|tata tea premium|wagh bakri tea|green tea|bru coffee|nescafe classic|nescafe gold|bournvita|horlicks|complan|boost|tang|real fruit juice|tropicana juice|paper boat|coca cola|pepsi|sprite|thums up|limca|frooti|maaza|mineral water|bisleri water|kissan ketchup|tomato ketchup|maggi ketchup|mayonnaise|schezwan sauce|soy sauce|vinegar|pickle|mango pickle|jam|kissan jam|peanut butter|nutella|honey|dabur honey|turmeric powder|haldi powder|red chilli powder|coriander powder|cumin seeds|jeera|mustard seeds|garam masala|everest masala|mdh masala|sambar masala|chole masala|pav bhaji masala|kitchen king|black pepper|cardamom|elaichi|cloves|cinnamon|bay leaf|hing|tamarind|onion|potato|tomato|garlic|ginger|green chilli|lemon|coriander leaves|banana|apple|orange|grapes|pomegranate|papaya|watermelon|mango|spinach|cauliflower|cabbage|carrot|capsicum|cucumber|brinjal|lady finger|peas|surf excel|ariel detergent|tide detergent|rin soap|vim dishwash|vim bar|harpic|lizol|colin glass cleaner|domex|dettol|dettol handwash|lifebuoy|lux soap|dove soap|pears soap|santoor soap|cinthol|dettol soap|colgate toothpaste|pepsodent|close up|sensodyne|dabur red toothpaste|clinic plus shampoo|head and shoulders|pantene|sunsilk|dove shampoo|parachute hair oil|bajaj almond oil|vaseline|nivea cream|fair and lovely|ponds cream|whisper pads|stayfree|pampers diapers|huggies|cerelac|lactogen|tissue paper|toilet paper|garbage bags|aluminium foil|cling film|toothbrush|razor|gillette|colin|good knight|all out|hit spray|odonil|matchbox|candles|cooking gas lighter`.split("|");
+
+const $ = id => document.getElementById(id);
+const fmt = n => "₹" + Number(n).toLocaleString("en-IN");
+
+/* ---------- Offline fuzzy "guess what they meant" ---------- */
+function lev(a,b){
+  const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
+  let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){
+    const cur=[i];
+    for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    prev=cur;
   }
+  return prev[n];
+}
+/* Collapse common Indian-English spelling variants so "aata/atta", "dhal/dal", "ashirwad/aashirvaad" sit closer */
+function phon(w){
+  return w.toLowerCase().replace(/[^a-z0-9]/g,"")
+    .replace(/ph/g,"f").replace(/w/g,"v").replace(/aa/g,"a").replace(/ee/g,"i").replace(/oo/g,"u")
+    .replace(/dh/g,"d").replace(/th/g,"t").replace(/kh/g,"k").replace(/z/g,"j").replace(/c(?=[eiy])/g,"s").replace(/c/g,"k")
+    .replace(/(.)\1+/g,"$1").replace(/h(?=$)/g,"").replace(/[aeiou](?=$)/,"");
+}
+function wsim(a,b){
+  if(a===b) return 1;
+  const pa=phon(a), pb=phon(b);
+  if(pa===pb && pa.length>1) return .95;
+  if(pa.length>=3 && pb.length>=3 && (pb.startsWith(pa)||pa.startsWith(pb))) return .85;
+  const d=lev(pa,pb), L=Math.max(pa.length,pb.length);
+  return Math.max(0,1-d/L);
+}
+const QTY = /(\d+(?:\.\d+)?)\s*(kgs?|kilos?|grams?|gms?|gm|g|ltrs?|litres?|liters?|l|ml|packs?|pcs|pieces)\b/ig;
+function normUnit(u){u=u.toLowerCase(); if(/^k/.test(u))return"kg"; if(/^(g|gm)/.test(u))return"g"; if(/^(l|lit)/.test(u))return"L"; if(u==="ml")return"ml"; return"pack";}
 
-  // Classic edit distance: number of single-letter insertions, deletions or substitutions
-  function editDistance(a, b) {
-    const m = a.length, n = b.length;
-    let prev = Array.from({ length: n + 1 }, (_, j) => j);
-    for (let i = 1; i <= m; i++) {
-      const cur = [i];
-      for (let j = 1; j <= n; j++) {
-        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
-      }
-      prev = cur;
-    }
-    return prev[n];
+function localGuess(raw){
+  let qty=""; const stripped = raw.replace(QTY,(m,n,u)=>{qty=n+normUnit(u);return " ";});
+  const qt = stripped.toLowerCase().split(/[^a-z]+/).filter(t=>t.length>1);
+  if(!qt.length) return [];
+  const scored = CATALOG.map(item=>{
+    const it = item.split(" ");
+    let sum=0;
+    for(const t of qt){ let best=0; for(const w of it) best=Math.max(best,wsim(t,w)); sum += best>=.6?best:0; }
+    const coverage = sum/qt.length;                       // how well the query is explained
+    const brevity = Math.min(1,qt.length/it.length);      // prefer items that aren't far longer than the query
+    return {item, score: coverage*.85 + brevity*.15, coverage};
+  }).filter(x=>x.coverage>=.6).sort((a,b)=>b.score-a.score);
+  const top = scored.slice(0,MAX_GUESSES).filter((x,i)=>i===0 || x.score>=scored[0].score-.2);
+  return top.map(x=>(x.item+(qty?" "+qty:"")).replace(/^./,c=>c.toUpperCase()));
+}
+
+async function aiGuess(raw){
+  if(!AI_API) return [];
+  try{
+    const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),6000);
+    const r=await fetch(AI_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:raw}),signal:ctl.signal});
+    clearTimeout(t);
+    const j=await r.json();
+    return (j.guesses||[]).map(String).slice(0,MAX_GUESSES);
+  }catch(e){ return []; }
+}
+
+async function guessProducts(raw){
+  const ai = await aiGuess(raw);
+  const local = localGuess(raw);
+  const seen = new Set(), out=[];
+  for(const g of [...ai,...local]){ const k=g.toLowerCase(); if(!seen.has(k)){seen.add(k);out.push(g);} }
+  if(!out.length) out.push(raw.trim());                   // nothing matched: search exactly what was typed
+  return out.slice(0,MAX_GUESSES);
+}
+
+/* ---------- Prices ---------- */
+function seed(str){let h=2166136261;for(const c of str){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return((h>>>0)%1000)/1000}}
+function demoPrices(product){
+  const rnd=seed(product.toLowerCase()), base=40+Math.round(rnd()*460), q=encodeURIComponent(product);
+  return STORES.map(s=>({store:s.name,title:product,price:Math.round(base*(0.82+rnd()*0.22)),url:s.url(q)}));
+}
+async function pricesFor(product){
+  if(!PRICE_API) return {items:demoPrices(product),demo:true};
+  const r=await fetch(PRICE_API+encodeURIComponent(product));
+  if(!r.ok) throw new Error("Price service returned "+r.status);
+  return {items:await r.json(),demo:false};
+}
+
+/* ---------- UI ---------- */
+let lastRaw="", lastGuesses=[];
+
+function renderGuess(raw,guesses,active){
+  const box=$("guess"); box.hidden=false; box.innerHTML="";
+  const same = guesses.length===1 && guesses[0].toLowerCase()===raw.trim().toLowerCase();
+  const l=document.createElement("div"); l.className="lbl";
+  l.textContent = same ? "Searching for what you typed:" : `You typed “${raw.trim()}”. We think you meant:`;
+  box.appendChild(l);
+  const row=document.createElement("div"); row.className="chips";
+  const all=document.createElement("button"); all.type="button"; all.className="chip"+(active==null?" on":""); all.textContent="All guesses";
+  all.onclick=()=>run(lastRaw,null,true);
+  if(guesses.length>1) row.appendChild(all);
+  guesses.forEach((g,i)=>{
+    const b=document.createElement("button"); b.type="button"; b.className="chip"+(active===i?" on":""); b.textContent=g;
+    b.onclick=()=>run(lastRaw,i,true); row.appendChild(b);
+  });
+  box.appendChild(row);
+}
+
+function renderResults(entries,demo){
+  const top=entries.filter(i=>i.price>0).sort((a,b)=>a.price-b.price).slice(0,5);
+  const list=$("results"); list.innerHTML="";
+  if(!top.length){ $("status").textContent="No prices found. Try a different name."; return; }
+  top.forEach((it,i)=>{
+    const li=document.createElement("li"); if(i===0) li.className="best";
+    const a=document.createElement("a"); a.href=it.url; a.target="_blank"; a.rel="noopener noreferrer";
+    const store=document.createElement("span"); store.className="store"; store.textContent=it.store;
+    if(i===0){const t=document.createElement("span");t.className="tag";t.textContent="Lowest";store.appendChild(t);}
+    const item=document.createElement("span"); item.className="item"; item.textContent=it.title;
+    const price=document.createElement("span"); price.className="price"; price.textContent=fmt(it.price);
+    a.append(store,item,price);
+    if(i>0){const d=it.price-top[0].price; if(d>0){const s=document.createElement("span");s.className="save";s.textContent=`${fmt(d)} more than the lowest`;a.append(s);}}
+    li.appendChild(a); list.appendChild(li);
+  });
+  $("status").textContent=`Top ${top.length} results, cheapest first`;
+  const note=$("note"); note.hidden=!demo;
+  note.textContent=demo?"Demo mode: prices are estimated samples. Links open each store's real search page. Set PRICE_API for live prices.":"";
+}
+
+async function run(raw,only,reuse){
+  raw=raw.trim(); if(!raw) return;
+  $("q").value=raw; lastRaw=raw;
+  $("results").innerHTML=""; $("note").hidden=true;
+  try{
+    if(!reuse){ $("status").textContent="Working out what you meant…"; lastGuesses=await guessProducts(raw); }
+    renderGuess(raw,lastGuesses,only);
+    $("status").textContent="Checking stores…";
+    const targets = only==null ? lastGuesses : [lastGuesses[only]];
+    const res = await Promise.all(targets.map(async g=>{ const r=await pricesFor(g); return {g,...r}; }));
+    const entries=[]; let demo=false;
+    res.forEach(r=>{ demo=demo||r.demo; r.items.forEach(it=>entries.push({...it,title:it.title||r.g})); });
+    renderResults(entries,demo);
+  }catch(e){
+    $("status").textContent="Couldn't fetch prices: "+e.message+". Check your connection and try again.";
   }
+}
 
-  function tokens(s) {
-    return s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
-  }
-
-  // Allowed typos grow with word length: 0 for very short words, 1 for medium, 2 for long
-  function allowedTypos(word) {
-    if (word.length <= 3) return 0;
-    if (word.length <= 6) return 1;
-    return 2;
-  }
-
-  // True if every word in the query matches some word in the name, allowing small spelling differences
-  function fuzzyMatch(query, name) {
-    const qTokens = tokens(query);
-    const nTokens = tokens(name);
-    if (qTokens.length === 0) return true;
-    return qTokens.every(qw => nTokens.some(nw => {
-      if (nw.includes(qw)) return true;
-      return editDistance(qw, nw) <= allowedTypos(qw);
-    }));
-  }
-
-  function onProductInput() {
-    const q = document.getElementById("product").value.trim();
-    const box = document.getElementById("links");
-    const note = document.getElementById("spellNote");
-    if (!q) {
-      box.innerHTML = "";
-      note.textContent = "Type a product name to get search links.";
-    } else {
-      // Use the typed name as-is. Amazon, Flipkart and Google also correct spelling themselves.
-      const enc = encodeURIComponent(q);
-      box.innerHTML = platforms.map(p =>
-        `<a href="${p.url(enc)}" target="_blank" rel="noopener">Search ${escapeHTML(p.name)}</a>`
-      ).join("");
-      note.textContent = "Misspelled names are fine: the search links and the table both match close spellings.";
-    }
-    render();
-  }
-
-  function addFromText() {
-    const lines = document.getElementById("input").value.split("\n");
-    let added = 0;
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      const parts = line.split("|").map(s => s.trim());
-      const [name, platform, priceRaw = "", moq = "", link = ""] = parts;
-      if (!name) continue;
-      const price = parseFloat(priceRaw.replace(/[₹,\s]/g, ""));
-      rows.push({ id: nextId++, name, platform: platform || "-", price: isNaN(price) ? null : price, moq: moq || "-", link });
-      added++;
-    }
-    if (added === 0) { alert("No valid lines found. Use: Product | Platform | Price | MOQ | Link"); return; }
-    document.getElementById("input").value = "";
-    render();
-  }
-
-  function removeRow(id) {
-    rows = rows.filter(r => r.id !== id);
-    render();
-  }
-
-  function sortedRows() {
-    return [...rows].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
-  }
-
-  function render() {
-    const tbody = document.getElementById("rows");
-    const note = document.getElementById("matchNote");
-    const q = document.getElementById("product").value.trim();
-    const visible = sortedRows().filter(r => !q || fuzzyMatch(q, r.name));
-
-    note.textContent = q
-      ? `Showing ${visible.length} of ${rows.length} rows matching "${q}" (close spellings included).`
-      : "";
-
-    if (visible.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#888">${rows.length === 0 ? "No results yet" : "No rows match this name"}</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = visible.map((r, i) => {
-      const linkCell = r.link
-        ? `<a href="${escapeHTML(r.link)}" target="_blank" rel="noopener">Open</a>`
-        : "-";
-      const priceCell = r.price !== null ? r.price.toLocaleString("en-IN") : "-";
-      return `<tr class="${i === 0 && r.price !== null ? "best" : ""}">
-        <td>${i + 1}</td>
-        <td>${escapeHTML(r.name)}</td>
-        <td>${escapeHTML(r.platform)}</td>
-        <td>${priceCell}</td>
-        <td>${escapeHTML(r.moq)}</td>
-        <td>${linkCell}</td>
-        <td><button class="small danger" onclick="removeRow(${r.id})">✕</button></td>
-      </tr>`;
-    }).join("");
-  }
-
-  function exportCSV() {
-    const data = sortedRows().filter(r => {
-      const q = document.getElementById("product").value.trim();
-      return !q || fuzzyMatch(q, r.name);
-    });
-    if (data.length === 0) { alert("Nothing to export."); return; }
-    const header = ["Sl No", "Product Name", "Platform", "Price (INR)", "MOQ", "Link"];
-    const lines = [header.join(",")];
-    data.forEach((r, i) => {
-      const cells = [i + 1, r.name, r.platform, r.price ?? "", r.moq, r.link];
-      lines.push(cells.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","));
-    });
-    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "price_comparison.csv";
-    a.click();
-  }
-
-  function clearAll() {
-    if (confirm("Clear all rows?")) { rows = []; render(); }
-  }
-
-  onProductInput();
+$("form").addEventListener("submit",e=>{e.preventDefault(); run($("q").value,null,false);});
+["tur dhal 1kg","ashirwad aata 5 kg","maggie noodels","amul buter"].forEach(t=>{
+  const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=t;
+  b.onclick=()=>run(t,null,false); $("samples").appendChild(b);
+});
 </script>
 </body>
 </html>
