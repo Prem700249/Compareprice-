@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Price & MOQ Finder</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background: #f4f6f9; color: #222; }
+  .container { max-width: 1000px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+  h1 { font-size: 1.5rem; margin-top: 0; }
+  h2 { font-size: 1.1rem; margin: 24px 0 6px; }
+  label { font-weight: 600; }
+  input, textarea { width: 100%; padding: 10px; margin: 6px 0 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+  textarea { height: 120px; font-family: monospace; }
+  button { padding: 10px 16px; border: none; border-radius: 6px; background: #2563eb; color: #fff; cursor: pointer; font-size: .95rem; margin: 0 6px 6px 0; }
+  button.danger { background: #dc2626; }
+  button.small { padding: 4px 8px; font-size: .8rem; }
+  .links a { display: inline-block; margin: 4px 8px 4px 0; padding: 6px 10px; background: #e0e7ff; border-radius: 5px; text-decoration: none; color: #1e3a8a; font-size: .9rem; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: .95rem; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; word-break: break-word; }
+  th { background: #f1f5f9; }
+  tr.best td { background: #ecfdf5; }
+  .hint { font-size: .85rem; color: #666; margin: 0; }
+  .matchnote { font-size: .85rem; color: #1e3a8a; margin: 4px 0; }
+  @media (max-width: 600px) { table { font-size: .8rem; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔎 Product Price & MOQ Finder</h1>
+
+  <label for="product">Product name (spelling mistakes are OK)</label>
+  <input id="product" placeholder="e.g. wodden study tabel" oninput="onProductInput()">
+  <p class="hint" id="spellNote"></p>
+  <div class="links" id="links"></div>
+
+  <h2>Paste results</h2>
+  <p class="hint">One product per line. Format: Product | Platform | Price (₹) | MOQ | Link</p>
+  <textarea id="input" placeholder="Wooden Study Table | Amazon | 2499 | 1 | https://www.amazon.in/..."></textarea>
+  <button onclick="addFromText()">Add to table</button>
+
+  <h2>Results (lowest price first)</h2>
+  <p class="matchnote" id="matchNote"></p>
+  <table>
+    <thead>
+      <tr><th>Sl No</th><th>Product Name</th><th>Platform</th><th>Price (₹)</th><th>MOQ</th><th>Link</th><th></th></tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <p style="margin-top:16px">
+    <button onclick="exportCSV()">Download CSV</button>
+    <button class="danger" onclick="clearAll()">Clear all</button>
+  </p>
+</div>
+
+<script>
+  const platforms = [
+    { name: "Amazon.in",       url: q => `https://www.amazon.in/s?k=${q}` },
+    { name: "Flipkart",        url: q => `https://www.flipkart.com/search?q=${q}` },
+    { name: "IndiaMART",       url: q => `https://dir.indiamart.com/search.mp?ss=${q}` },
+    { name: "Meesho",          url: q => `https://www.meesho.com/search?q=${q}` },
+    { name: "Alibaba",         url: q => `https://www.alibaba.com/trade/search?SearchText=${q}` },
+    { name: "Google Shopping", url: q => `https://www.google.com/search?tbm=shop&q=${q}` }
+  ];
+
+  let rows = [];
+  let nextId = 1;
+
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // Classic edit distance: number of single-letter insertions, deletions or substitutions
+  function editDistance(a, b) {
+    const m = a.length, n = b.length;
+    let prev = Array.from({ length: n + 1 }, (_, j) => j);
+    for (let i = 1; i <= m; i++) {
+      const cur = [i];
+      for (let j = 1; j <= n; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+      }
+      prev = cur;
+    }
+    return prev[n];
+  }
+
+  function tokens(s) {
+    return s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+  }
+
+  // Allowed typos grow with word length: 0 for very short words, 1 for medium, 2 for long
+  function allowedTypos(word) {
+    if (word.length <= 3) return 0;
+    if (word.length <= 6) return 1;
+    return 2;
+  }
+
+  // True if every word in the query matches some word in the name, allowing small spelling differences
+  function fuzzyMatch(query, name) {
+    const qTokens = tokens(query);
+    const nTokens = tokens(name);
+    if (qTokens.length === 0) return true;
+    return qTokens.every(qw => nTokens.some(nw => {
+      if (nw.includes(qw)) return true;
+      return editDistance(qw, nw) <= allowedTypos(qw);
+    }));
+  }
+
+  function onProductInput() {
+    const q = document.getElementById("product").value.trim();
+    const box = document.getElementById("links");
+    const note = document.getElementById("spellNote");
+    if (!q) {
+      box.innerHTML = "";
+      note.textContent = "Type a product name to get search links.";
+    } else {
+      // Use the typed name as-is. Amazon, Flipkart and Google also correct spelling themselves.
+      const enc = encodeURIComponent(q);
+      box.innerHTML = platforms.map(p =>
+        `<a href="${p.url(enc)}" target="_blank" rel="noopener">Search ${escapeHTML(p.name)}</a>`
+      ).join("");
+      note.textContent = "Misspelled names are fine: the search links and the table both match close spellings.";
+    }
+    render();
+  }
+
+  function addFromText() {
+    const lines = document.getElementById("input").value.split("\n");
+    let added = 0;
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const parts = line.split("|").map(s => s.trim());
+      const [name, platform, priceRaw = "", moq = "", link = ""] = parts;
+      if (!name) continue;
+      const price = parseFloat(priceRaw.replace(/[₹,\s]/g, ""));
+      rows.push({ id: nextId++, name, platform: platform || "-", price: isNaN(price) ? null : price, moq: moq || "-", link });
+      added++;
+    }
+    if (added === 0) { alert("No valid lines found. Use: Product | Platform | Price | MOQ | Link"); return; }
+    document.getElementById("input").value = "";
+    render();
+  }
+
+  function removeRow(id) {
+    rows = rows.filter(r => r.id !== id);
+    render();
+  }
+
+  function sortedRows() {
+    return [...rows].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+  }
+
+  function render() {
+    const tbody = document.getElementById("rows");
+    const note = document.getElementById("matchNote");
+    const q = document.getElementById("product").value.trim();
+    const visible = sortedRows().filter(r => !q || fuzzyMatch(q, r.name));
+
+    note.textContent = q
+      ? `Showing ${visible.length} of ${rows.length} rows matching "${q}" (close spellings included).`
+      : "";
+
+    if (visible.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#888">${rows.length === 0 ? "No results yet" : "No rows match this name"}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = visible.map((r, i) => {
+      const linkCell = r.link
+        ? `<a href="${escapeHTML(r.link)}" target="_blank" rel="noopener">Open</a>`
+        : "-";
+      const priceCell = r.price !== null ? r.price.toLocaleString("en-IN") : "-";
+      return `<tr class="${i === 0 && r.price !== null ? "best" : ""}">
+        <td>${i + 1}</td>
+        <td>${escapeHTML(r.name)}</td>
+        <td>${escapeHTML(r.platform)}</td>
+        <td>${priceCell}</td>
+        <td>${escapeHTML(r.moq)}</td>
+        <td>${linkCell}</td>
+        <td><button class="small danger" onclick="removeRow(${r.id})">✕</button></td>
+      </tr>`;
+    }).join("");
+  }
+
+  function exportCSV() {
+    const data = sortedRows().filter(r => {
+      const q = document.getElementById("product").value.trim();
+      return !q || fuzzyMatch(q, r.name);
+    });
+    if (data.length === 0) { alert("Nothing to export."); return; }
+    const header = ["Sl No", "Product Name", "Platform", "Price (INR)", "MOQ", "Link"];
+    const lines = [header.join(",")];
+    data.forEach((r, i) => {
+      const cells = [i + 1, r.name, r.platform, r.price ?? "", r.moq, r.link];
+      lines.push(cells.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","));
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "price_comparison.csv";
+    a.click();
+  }
+
+  function clearAll() {
+    if (confirm("Clear all rows?")) { rows = []; render(); }
+  }
+
+  onProductInput();
+</script>
+</body>
+</html>
